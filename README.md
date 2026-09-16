@@ -18,12 +18,38 @@ extension system.
    helper's `OUTPUT_NAME`.
 4. Define named message types with nlohmann ADL JSON conversions and implement
    public direct `handle` overloads returning `ActorResult` or
-   `ActorTask<ActorResult>`. Use `ActorContext::await_asio` for network, timer,
-   or other Asio suspension.
+   `ActorTask<ActorResult>`. Keep bounded in-memory work synchronous, use
+   `ActorContext::run_blocking` for synchronous database, filesystem, or
+   CPU-heavy calls, and use `ActorContext::await_asio` for network, timer, or
+   other Asio suspension.
+5. For a platform command, derive one request type from
+   `command::RequestMessage`, expose it with `command_contract()`, and handle
+   that request like any other reflected actor message. Return exactly one
+   correlated `command::CommandCompleted`; its `Continue` or `Consume` value
+   controls whether the original `RawMessageEvent` enters ordinary pipelines.
+   An optional `command::re2(...)` adds normalized full-match aliases while the
+   ordinary command name remains the configuration, catalog, header, and
+   invocation identity. Do not put a handler name or callable in the command
+   declaration.
 
 `OBCX_ACTOR_EXPORT_V2` supplies the numeric ABI generation, factory,
-destructor, actor name, actor version, and generated schema-1 input contract.
+destructor, actor name, actor version, and generated schema-2 input contract.
 The runtime validates this contract before actor construction.
+
+`ExampleRequested` demonstrates the synchronous handler shape.
+`ExampleBlockingRequested` demonstrates the blocking boundary:
+
+```cpp
+auto value = co_await context.run_blocking([input] {
+  return synchronous_library_call(input);
+});
+```
+
+The callable runs on the process blocking pool and the continuation returns
+through the actor scheduler. It must not capture stack references that may
+expire, and it must return an owned value rather than a reference or an Asio
+awaitable. Do not move timers, sockets, bot sends, or an entire coroutine graph
+onto this pool.
 
 ## Build And Install
 
@@ -67,6 +93,28 @@ partition = "conversation_id"
 [actors.example.config]
 id_prefix = "example"
 
+[command_runtime]
+timeout_ms = 5000
+
+[command_runtime.help]
+page_bytes = 3500
+maximum_pages = 10
+
+[command_runtime.access.groups]
+mode = "unrestricted"
+entries = []
+
+[command_runtime.access.users]
+mode = "unrestricted"
+entries = []
+
+[[command_runtime.routes]]
+actor = "example"
+commands = ["example"]
+platforms = ["telegram"]
+bots = ["telegram_bot"]
+fallback = "continue"
+
 [pipelines.example]
 source = "obcx::actors::events::ExampleRequested"
 
@@ -77,6 +125,18 @@ input = "obcx::actors::events::ExampleRequested"
 output = "obcx::actors::events::ExampleHandled"
 mode = "await"
 ```
+
+The actor declaration is only a capability description. A route activates it
+for explicit platform/bot scopes; the platform adapter detects syntax and the
+runtime delivers `commands::ExampleCommand`. Catalog publication, when the
+platform supports it, is aggregated by the runtime rather than performed by
+the actor. RE2 patterns are matched only after platform syntax and bot-target
+validation, are excluded from platform catalogs, and never change which typed
+`handle` overload receives the request. Help bounds and both access policies
+are explicit whenever routes exist. Core reserves `help`; actors cannot declare
+or own it. Use exact platform, bot-installation, and native IDs for scoped
+allowlists or denylists; see
+[`docs/architecture/actor-command-routing.md`](../../docs/architecture/actor-command-routing.md).
 
 Actor-owned configuration must be read from the immutable generation view:
 
@@ -89,8 +149,10 @@ auto id_prefix = context.config()
 Keep any derived settings on the actor instance. Do not call
 `ConfigLoader::instance()`, use mutable namespace globals/function statics for
 configuration, or read configuration in the factory constructor. Bot
-connections and database instances are process-owned services and changing
-them requires a restart.
+installations, their component registries and transports are process-owned and
+are not actor services; actors use only `BotOperationGateway` for supported bot
+egress. Changing bot installation or database-instance definitions requires a
+process restart.
 
 ## Layout
 
