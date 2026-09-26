@@ -1,13 +1,13 @@
-cmake_minimum_required(VERSION 3.25)
-project(obcx_actor_example VERSION 0.1.0 LANGUAGES CXX)
-
-if(NOT TARGET obcx_core)
-  find_package(obcx-sdk CONFIG REQUIRED)
+cmake_minimum_required(VERSION 3.30)
+if(NOT DEFINED OBCX_CURRENT_PACKAGE)
+  project(obcx_actor_example VERSION 0.1.0 LANGUAGES CXX)
+  find_package(obcx-sdk CONFIG REQUIRED GLOBAL)
+  include(OBCXPackages)
+  obcx_load_configured_workspace()
+  return()
 endif()
-include(OBCXActor)
 
-obcx_add_actor(example
-  SOURCES src/example_actor.cpp
-  OUTPUT_NAME example)
-target_include_directories(example_actor PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/src)
+obcx_add_actor(SOURCES src/example_actor.cpp)
+target_include_directories(example_actor PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+install(TARGETS example_actor LIBRARY DESTINATION lib/obcx/actors)
+install(FILES package.toml DESTINATION share/obcx/packages/onebot-cxx.example)

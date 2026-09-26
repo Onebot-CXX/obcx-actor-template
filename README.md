@@ -2,20 +2,20 @@
 
 This repository is the canonical starting point for a native ABI 2 OBCX actor
 package. It uses `ReflectedActor<Derived>`, typed `handle` overloads,
-`ActorTask<ActorResult>`, canonical `actor.toml` metadata, the installed
-`obcx-sdk`, and `OBCXActor.cmake`. It contains no runtime adapter or alternate
+`ActorTask<ActorResult>`, canonical v2 `package.toml` metadata, the installed
+`obcx-sdk`, and `OBCXPackages.cmake`. It contains no runtime adapter or alternate
 extension system.
 
 ## Create An Actor
 
 1. Copy or instantiate this repository as an actor-named project.
-2. Update every required field in `actor.toml`. Keep `actor.abi = 2`,
-   `artifact.kind = "shared-library"`, and
-   `artifact.entrypoint = "obcx_create_actor_v2"`. List only built and
+2. Update every required field in `package.toml`. Keep `package.kind = "actor"`,
+   `actor.abi = 2`, `artifact.kind = "shared-library"`, and
+   `actor.entrypoint = "obcx_create_actor_v2"`. List only built and
    verified release targets in `artifact.platforms`.
-3. Rename `ExampleActor`, its source files, and the `obcx_add_actor` target.
-   `artifact.target` must equal `<name>_actor`; `artifact.name` must equal the
-   helper's `OUTPUT_NAME`.
+3. Rename `ExampleActor` and its source files. Declare `artifact.target`,
+   `artifact.export_target` and `artifact.name` in metadata; the constructor
+   reads them instead of maintaining another CMake name/output list.
 4. Define named message types with nlohmann ADL JSON conversions and implement
    public direct `handle` overloads returning `ActorResult` or
    `ActorTask<ActorResult>`. Keep bounded in-memory work synchronous, use
@@ -56,28 +56,30 @@ onto this pool.
 The supported baseline is Linux x86_64/arm64, CMake 3.30+, GCC 16.1+, C++26,
 `-freflection`, and `__cpp_impl_reflection >= 202506L`.
 
-Install OBCX or point CMake to an SDK prefix, then run:
+The current development path is an explicit root OBCX workspace selecting this
+package. Prepare its frozen graph before configuring; see core's
+`docs/architecture/package-cmake.md`. Tests are selected by the workspace profile.
 
-```bash
-cmake -S . -B build -DCMAKE_PREFIX_PATH=/path/to/obcx-sdk-prefix
-cmake --build build
-cmake --install build --prefix /path/to/actor-prefix
-```
+The installed-SDK bootstrap requires all six `OBCX_PACKAGES_WORKSPACE`,
+`OBCX_PACKAGES_LOCK`, `OBCX_PACKAGES_GRAPH`, `OBCX_PACKAGES_CACHE`,
+`OBCX_PACKAGES_MODE`, `OBCX_PACKAGES_STATE_DIR` variables, an explicit build
+configuration and SDK prefix. Keep generated state outside package sources;
+expanded standalone distribution acceptance is deferred, not implicitly enabled
+by a short `cmake -S .` command.
 
 The shared actor is installed under `lib/obcx/actors/` and its canonical
-metadata under `share/obcx/actors/<actor-id>/actor.toml`.
+metadata under `share/obcx/packages/<package-id>/package.toml`.
 
 ## Dependencies
 
-`actor.toml` is the canonical identity, dependency, compatibility, and
-publication document. Declare package-manager dependency names only in
-`[dependencies].packages` and actor dependencies only in
-`[dependencies].actors`. The consuming OBCX checkout merges package
-dependencies from every package selected in its `actors.toml`; this standalone
-template repository does not contain or invoke the OBCX manifest generator.
+`package.toml` is the canonical identity, dependency, compatibility and publication
+document. Declare `libraries`, logical `actors`, and `system` dependencies,
+including the SDK, with explicit constraints and targets. `test_dependencies`
+is separate. `packages.toml` supplies the source/provider bindings.
 
-Use ordinary `find_package()` calls and pass linked CMake targets through the
-`DEPS` argument of `obcx_add_actor`.
+Use `obcx_add_actor(SOURCES ...)`; external links come from metadata. Internal
+implementation and test targets must register with `obcx_package_target` and an
+explicit role. Do not manually find/link undeclared external targets.
 
 ## Runtime Configuration
 
@@ -158,7 +160,7 @@ process restart.
 
 ```text
 .
-├── actor.toml
+├── package.toml
 ├── CMakeLists.txt
 └── src/
     ├── example_actor.cpp
