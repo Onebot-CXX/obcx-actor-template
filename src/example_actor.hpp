@@ -49,9 +49,6 @@ struct ExampleCommand final : command::RequestMessage<ExampleCommand> {};
 
 class ExampleActor final : public core::ReflectedActor<ExampleActor> {
 public:
-  static constexpr std::string_view actor_name = "example";
-  static constexpr std::string_view actor_version = "0.1.0";
-
   static constexpr auto command_contract() {
     return command::catalog(command::observe<commands::ExampleCommand>(
         "example", "Run the example actor command",

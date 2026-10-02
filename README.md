@@ -34,7 +34,16 @@ extension system.
 
 `OBCX_ACTOR_EXPORT_V2` supplies the numeric ABI generation, factory,
 destructor, actor name, actor version, and generated schema-2 input contract.
-The runtime validates this contract before actor construction.
+The runtime validates this contract before actor construction. Name and version
+are inherited automatically from `package.toml` (`actor.name`, `package.version`);
+do not declare `actor_name` or `actor_version` in C++. The existing one-parameter
+`ReflectedActor<Derived>` base and export macro remain sufficient.
+
+Build helpers also attribute `OBCX_INFO/WARN/ERROR` and other logging macros to
+`[actor.name]`, including registered internal libraries and background work.
+Core-owned code keeps `[core]`. No extra runtime logging configuration or manual
+logger injection is required. Do not include another actor package's authoring
+facade in the same translation unit; communicate through public message types.
 
 `ExampleRequested` demonstrates the synchronous handler shape.
 `ExampleBlockingRequested` demonstrates the blocking boundary:
@@ -57,11 +66,11 @@ The supported baseline is Linux x86_64/arm64, CMake 3.30+, GCC 16.1+, C++26,
 `-freflection`, and `__cpp_impl_reflection >= 202506L`.
 
 The current development path is an explicit root OBCX workspace selecting this
-package. Prepare its frozen graph before configuring; see core's
+package. CMake resolves the graph offline during configure; see core's
 `docs/architecture/package-cmake.md`. Tests are selected by the workspace profile.
 
-The installed-SDK bootstrap requires all six `OBCX_PACKAGES_WORKSPACE`,
-`OBCX_PACKAGES_LOCK`, `OBCX_PACKAGES_GRAPH`, `OBCX_PACKAGES_CACHE`,
+The installed-SDK bootstrap requires all four `OBCX_PACKAGES_WORKSPACE`,
+`OBCX_PACKAGES_CACHE`,
 `OBCX_PACKAGES_MODE`, `OBCX_PACKAGES_STATE_DIR` variables, an explicit build
 configuration and SDK prefix. Keep generated state outside package sources;
 expanded standalone distribution acceptance is deferred, not implicitly enabled
