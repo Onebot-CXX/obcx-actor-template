@@ -1,4 +1,4 @@
-# Domain SDK migration
+# Bot SDK migration
 
 This actor requires OBCX SDK/core `>=2.7.0,<3.0.0` and input contract schema 3. Its scheduler
 ABI and `OBCX_ACTOR_EXPORT_V2` remain V2; `package.toml` itself remains manifest
@@ -40,7 +40,7 @@ loading this schema-3 package into an old process is not a rollback path.
 The entry is byte-identical to the maintained manifest; both generated indices
 passed the authoritative validator and deterministic check. This closes metadata
 synchronization only, not the frozen-build/loader/runtime gates above. See core's
-`packaging/actors/domain-sdk-cutover.md` for the matching-set rollback inventory.
+`packaging/actors/bot-sdk-cutover.md` for the matching-set rollback inventory.
 
 The registry is publishing metadata, not another actor. Core's `actor-registry/`
 is only its conformance snapshot, not a competing metadata authority.

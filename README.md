@@ -6,7 +6,7 @@ package. It uses `ReflectedActor<Derived>`, typed `handle` overloads,
 OBCX 2.x SDK with actor input contract schema 3, and `OBCXPackages.cmake`.
 The package manifest schema and numeric actor ABI stay at 2; neither is the
 input-contract schema. It contains no runtime adapter or alternate extension
-system. See [domain SDK migration](docs/domain-sdk-migration.md) for the
+system. See [bot SDK migration](docs/bot-sdk-migration.md) for the
 compatibility boundary and validation status.
 
 ## Create An Actor
@@ -73,7 +73,7 @@ preserves the complete conversation scope without reconstructing native routes.
 
 ```cpp
 #include <core/bot/bot_client.hpp>
-#include <core/bot/domain_events.hpp>
+#include <core/bot/bot_events.hpp>
 
 namespace example {
 auto reply(obcx::bot::BotClient &bot, obcx::bot::MessageReceived received,
